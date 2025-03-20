@@ -1,5 +1,9 @@
+using AutoMapper;
 using Dot.Net.WebApi.Controllers.Domain;
+using Dot.Net.WebApi.Domain;
 using Microsoft.AspNetCore.Mvc;
+using P7CreateRestApi.DTOs;
+using P7CreateRestApi.Repositories.Interfaces;
 
 namespace Dot.Net.WebApi.Controllers
 {
@@ -7,53 +11,86 @@ namespace Dot.Net.WebApi.Controllers
     [Route("[controller]")]
     public class RatingController : ControllerBase
     {
-        // TODO: Inject Rating service
+        private readonly IGenericRepository<Rating> _repository;
+        private readonly IMapper _mapper;
+        private readonly ILogger<RatingController> _logger;
 
-        [HttpGet]
-        [Route("list")]
-        public IActionResult Home()
+        public RatingController(IGenericRepository<Rating> repository, IMapper mapper, ILogger<RatingController> logger)
         {
-            // TODO: find all Rating, add to model
-            return Ok();
+            _repository = repository;
+            _mapper = mapper;
+            _logger = logger;
         }
 
         [HttpGet]
-        [Route("add")]
-        public IActionResult AddRatingForm([FromBody]Rating rating)
+        public async Task<ActionResult<IEnumerable<RatingDTO>>> GetAll()
         {
-            return Ok();
+            _logger.LogInformation("Récupération de toutes les Rating d'enchères ...");
+            var ratings = await _repository.GetAllAsync();
+            return Ok(_mapper.Map<IEnumerable<RatingDTO>>(ratings));
         }
 
-        [HttpGet]
-        [Route("validate")]
-        public IActionResult Validate([FromBody]Rating rating)
+        [HttpGet("{id}")]
+        public async Task<ActionResult<RatingDTO>> GetById(int id)
         {
-            // TODO: check data valid and save to db, after saving return Rating list
-            return Ok();
-        }
+            _logger.LogInformation($"Récupération de la liste des Rating avec l'ID : {id}");
+            var rating = await _repository.GetByIdAsync(id);
+            if (rating == null)
+            {
+                _logger.LogWarning($"Rating avec ID {id} non trouvé.");
+                return NotFound();
+            }
 
-        [HttpGet]
-        [Route("update/{id}")]
-        public IActionResult ShowUpdateForm(int id)
-        {
-            // TODO: get Rating by Id and to model then show to the form
-            return Ok();
+            return Ok(_mapper.Map<RatingDTO>(rating));
         }
 
         [HttpPost]
-        [Route("update/{id}")]
-        public IActionResult UpdateRating(int id, [FromBody] Rating rating)
+        public async Task<ActionResult<RatingDTO>> Create(RatingDTO ratingDto)
         {
-            // TODO: check required fields, if valid call service to update Rating and return Rating list
-            return Ok();
+            _logger.LogInformation("Création d'un nouveau Rating...");
+            var rating = _mapper.Map<Rating>(ratingDto);
+            var newRating = await _repository.AddAsync(rating);
+            _logger.LogInformation($"Rating créé avec succès avec ID: {newRating.Id}");
+
+            return CreatedAtAction(nameof(GetById), new { id = newRating.Id }, _mapper.Map<RatingDTO>(newRating));
         }
 
-        [HttpDelete]
-        [Route("{id}")]
-        public IActionResult DeleteRating(int id)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, RatingDTO ratingDto)
         {
-            // TODO: Find Rating by Id and delete the Rating, return to Rating list
-            return Ok();
+            if (id != ratingDto.Id)
+            {
+                _logger.LogWarning($"Échec de la mise à jour : Mismatch d'ID (Route: {id}, DTO: {ratingDto.Id}).");
+                return BadRequest();
+            }
+
+            var rating = await _repository.GetByIdAsync(id);
+            if (rating == null)
+            {
+                _logger.LogWarning($"Échec de la mise à jour : Rating ID {id} non trouvé.");
+                return NotFound();
+            }
+
+            _mapper.Map(ratingDto, rating);
+            await _repository.UpdateAsync(rating);
+            _logger.LogInformation($"Rating avec ID {id} Mise à jour réussie.");
+
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            _logger.LogInformation($"Tentative de suppression Rating avec ID: {id}");
+            var success = await _repository.DeleteAsync(id);
+            if (!success)
+            {
+                _logger.LogWarning($"Suppression échouée: Rating avec ID {id} non trouvé.");
+                return NotFound();
+            }
+
+            _logger.LogInformation($"Rating avec ID {id} supression réussie.");
+            return NoContent();
         }
     }
 }

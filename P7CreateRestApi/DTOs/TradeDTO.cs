@@ -1,7 +1,12 @@
-namespace Dot.Net.WebApi.Domain
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace P7CreateRestApi.DTOs
 {
-    public class Trade
+    public class TradeDTO
     {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int TradeId { get; set; }
         public string Account { get; set; }
         public string AccountType { get; set; }

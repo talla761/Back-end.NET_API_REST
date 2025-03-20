@@ -1,6 +1,10 @@
+using AutoMapper;
 using Dot.Net.WebApi.Domain;
 using Dot.Net.WebApi.Repositories;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using P7CreateRestApi.DTOs;
+using P7CreateRestApi.Repositories.Interfaces;
 
 namespace Dot.Net.WebApi.Controllers
 {
@@ -8,78 +12,92 @@ namespace Dot.Net.WebApi.Controllers
     [Route("[controller]")]
     public class UserController : ControllerBase
     {
-        private UserRepository _userRepository;
+        private readonly IGenericRepository<User> _repository;
+        private readonly IMapper _mapper;
+        private readonly ILogger<UserController> _logger;
+        private readonly IPasswordHasher<User> _passwordHasher;
 
-        public UserController(UserRepository userRepository)
+        public UserController(IGenericRepository<User> repository, IMapper mapper, ILogger<UserController> logger, IPasswordHasher<User> passwordHasher)
         {
-            _userRepository = userRepository;
+            _repository = repository;
+            _mapper = mapper;
+            _logger = logger;
+            _passwordHasher = passwordHasher;
         }
 
         [HttpGet]
-        [Route("list")]
-        public IActionResult Home()
+        public async Task<ActionResult<IEnumerable<UserDTO>>> GetAll()
         {
-            return Ok();
+            _logger.LogInformation("Récupération de toutes les Users ...");
+            var users = await _repository.GetAllAsync();
+            return Ok(_mapper.Map<IEnumerable<UserDTO>>(users));
         }
 
-        [HttpGet]
-        [Route("add")]
-        public IActionResult AddUser([FromBody]User user)
+        [HttpGet("{id}")]
+        public async Task<ActionResult<UserDTO>> GetById(int id)
         {
-            return Ok();
-        }
-
-        [HttpGet]
-        [Route("validate")]
-        public IActionResult Validate([FromBody]User user)
-        {
-            if (!ModelState.IsValid)
-            {
-                return BadRequest();
-            }
-           
-           _userRepository.Add(user);
-
-            return Ok();
-        }
-
-        [HttpGet]
-        [Route("update/{id}")]
-        public IActionResult ShowUpdateForm(int id)
-        {
-            User user = _userRepository.FindById(id);
-            
+            _logger.LogInformation($"Récupération de la liste des Users avec l'ID : {id}");
+            var user = await _repository.GetByIdAsync(id);
             if (user == null)
-                throw new ArgumentException("Invalid user Id:" + id);
+            {
+                _logger.LogWarning($"User avec ID {id} non trouvé.");
+                return NotFound();
+            }
 
-            return Ok();
+            return Ok(_mapper.Map<UserDTO>(user));
         }
 
         [HttpPost]
-        [Route("update/{id}")]
-        public IActionResult UpdateUser(int id, [FromBody] User user)
+        public async Task<ActionResult<UserDTO>> Create(UserDTO userDto)
         {
-            // TODO: check required fields, if valid call service to update Trade and return Trade list
-            return Ok();
+            _logger.LogInformation("Création d'un nouveau User...");
+            var user = _mapper.Map<User>(userDto);
+
+            // Hachage du mot de passe avant l'enregistrement
+            user.Password = _passwordHasher.HashPassword(user, userDto.Password);
+
+            var newUser = await _repository.AddAsync(user);
+            _logger.LogInformation($"User créé avec succès avec ID: {newUser.Id}");
+
+            return CreatedAtAction(nameof(GetById), new { id = newUser.Id }, _mapper.Map<UserDTO>(newUser));
         }
 
-        [HttpDelete]
-        [Route("{id}")]
-        public IActionResult DeleteUser(int id)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, UserDTO userDto)
         {
-            User user = _userRepository.FindById(id);
-            
+            if (id != userDto.Id)
+            {
+                _logger.LogWarning($"Échec de la mise à jour : Mismatch d'ID (Route: {id}, DTO: {userDto.Id}).");
+                return BadRequest();
+            }
+
+            var user = await _repository.GetByIdAsync(id);
             if (user == null)
-                throw new ArgumentException("Invalid user Id:" + id);
+            {
+                _logger.LogWarning($"Échec de la mise à jour : User ID {id} non trouvé.");
+                return NotFound();
+            }
 
-            return Ok();
+            _mapper.Map(userDto, user);
+            await _repository.UpdateAsync(user);
+            _logger.LogInformation($"User avec ID {id} Mise à jour réussie.");
+
+            return NoContent();
         }
 
-        [HttpGet]
-        [Route("/secure/article-details")]
-        public async Task<ActionResult<List<User>>> GetAllUserArticles()
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
         {
-            return Ok();
+            _logger.LogInformation($"Tentative de suppression User avec ID: {id}");
+            var success = await _repository.DeleteAsync(id);
+            if (!success)
+            {
+                _logger.LogWarning($"Suppression échouée: User avec ID {id} non trouvé.");
+                return NotFound();
+            }
+
+            _logger.LogInformation($"User avec ID {id} supression réussie.");
+            return NoContent();
         }
     }
 }

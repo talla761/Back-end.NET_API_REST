@@ -1,5 +1,8 @@
+using AutoMapper;
 using Dot.Net.WebApi.Domain;
 using Microsoft.AspNetCore.Mvc;
+using P7CreateRestApi.DTOs;
+using P7CreateRestApi.Repositories.Interfaces;
 
 namespace Dot.Net.WebApi.Controllers
 {
@@ -7,52 +10,86 @@ namespace Dot.Net.WebApi.Controllers
     [Route("[controller]")]
     public class CurveController : ControllerBase
     {
-        // TODO: Inject Curve Point service
+        private readonly IGenericRepository<CurvePoint> _repository;
+        private readonly IMapper _mapper;
+        private readonly ILogger<CurveController> _logger;
 
-        [HttpGet]
-        [Route("list")]
-        public IActionResult Home()
+        public CurveController(IGenericRepository<CurvePoint> repository, IMapper mapper, ILogger<CurveController> logger)
         {
-            return Ok();
+            _repository = repository;
+            _mapper = mapper;
+            _logger = logger;
         }
 
         [HttpGet]
-        [Route("add")]
-        public IActionResult AddCurvePoint([FromBody]CurvePoint curvePoint)
+        public async Task<ActionResult<IEnumerable<CurvePointDTO>>> GetAll()
         {
-            return Ok();
+            _logger.LogInformation("Récupération de toutes les CurvePoint d'enchères ...");
+            var curvePoints = await _repository.GetAllAsync();
+            return Ok(_mapper.Map<IEnumerable<CurvePointDTO>>(curvePoints));
         }
 
-        [HttpGet]
-        [Route("validate")]
-        public IActionResult Validate([FromBody]CurvePoint curvePoint)
+        [HttpGet("{id}")]
+        public async Task<ActionResult<CurvePointDTO>> GetById(int id)
         {
-            // TODO: check data valid and save to db, after saving return bid list
-            return Ok();
-        }
+            _logger.LogInformation($"Récupération de la liste des CurvePoint avec l'ID : {id}");
+            var curvePoint = await _repository.GetByIdAsync(id);
+            if (curvePoint == null)
+            {
+                _logger.LogWarning($"CurvePoint avec ID {id} non trouvé.");
+                return NotFound();
+            }
 
-        [HttpGet]
-        [Route("update/{id}")]
-        public IActionResult ShowUpdateForm(int id)
-        {
-            // TODO: get CurvePoint by Id and to model then show to the form
-            return Ok();
+            return Ok(_mapper.Map<CurvePointDTO>(curvePoint));
         }
 
         [HttpPost]
-        [Route("update/{id}")]
-        public IActionResult UpdateCurvePoint(int id, [FromBody] CurvePoint curvePoint)
+        public async Task<ActionResult<CurvePointDTO>> Create(CurvePointDTO curvePointDto)
         {
-            // TODO: check required fields, if valid call service to update Curve and return Curve list
-            return Ok();
+            _logger.LogInformation("Création d'un nouveau CurvePoint...");
+            var curvePoint = _mapper.Map<CurvePoint>(curvePointDto);
+            var newCurvePoint = await _repository.AddAsync(curvePoint);
+            _logger.LogInformation($"CurvePoint créé avec succès avec ID: {newCurvePoint.Id}");
+
+            return CreatedAtAction(nameof(GetById), new { id = newCurvePoint.Id }, _mapper.Map<CurvePointDTO>(newCurvePoint));
         }
 
-        [HttpDelete]
-        [Route("{id}")]
-        public IActionResult DeleteBid(int id)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, CurvePointDTO curvePointDto)
         {
-            // TODO: Find Curve by Id and delete the Curve, return to Curve list
-            return Ok();
+            if (id != curvePointDto.Id)
+            {
+                _logger.LogWarning($"Échec de la mise à jour : Mismatch d'ID (Route: {id}, DTO: {curvePointDto.Id}).");
+                return BadRequest();
+            }
+
+            var curvePoint = await _repository.GetByIdAsync(id);
+            if (curvePoint == null)
+            {
+                _logger.LogWarning($"Échec de la mise à jour : CurvePoint ID {id} non trouvé.");
+                return NotFound();
+            }
+
+            _mapper.Map(curvePointDto, curvePoint);
+            await _repository.UpdateAsync(curvePoint);
+            _logger.LogInformation($"CurvePoint avec ID {id} Mise à jour réussie.");
+
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            _logger.LogInformation($"Tentative de suppression CurvePoint avec ID: {id}");
+            var success = await _repository.DeleteAsync(id);
+            if (!success)
+            {
+                _logger.LogWarning($"Suppression échouée: CurvePoint avec ID {id} non trouvé.");
+                return NotFound();
+            }
+
+            _logger.LogInformation($"CurvePoint avec ID {id} supression réussie.");
+            return NoContent();
         }
     }
 }

@@ -1,3 +1,4 @@
+using Dot.Net.WebApi.Domain;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +11,8 @@ public class ApplicationDbContext : IdentityDbContext<IdentityUser>
         : base(options)
     {
     }
+
+    public DbSet<BidList>? BidLists { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

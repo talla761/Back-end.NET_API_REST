@@ -1,4 +1,8 @@
+using AutoMapper;
+using Dot.Net.WebApi.Domain;
 using Microsoft.AspNetCore.Mvc;
+using P7CreateRestApi.DTOs;
+using P7CreateRestApi.Repositories.Interfaces;
 
 namespace Dot.Net.WebApi.Controllers
 {
@@ -6,53 +10,86 @@ namespace Dot.Net.WebApi.Controllers
     [Route("[controller]")]
     public class RuleNameController : ControllerBase
     {
-        // TODO: Inject RuleName service
+        private readonly IGenericRepository<RuleName> _repository;
+        private readonly IMapper _mapper;
+        private readonly ILogger<RuleNameController> _logger;
 
-        [HttpGet]
-        [Route("list")]
-        public IActionResult Home()
+        public RuleNameController(IGenericRepository<RuleName> repository, IMapper mapper, ILogger<RuleNameController> logger)
         {
-            // TODO: find all RuleName, add to model
-            return Ok();
+            _repository = repository;
+            _mapper = mapper;
+            _logger = logger;
         }
 
         [HttpGet]
-        [Route("add")]
-        public IActionResult AddRuleName([FromBody]RuleName trade)
+        public async Task<ActionResult<IEnumerable<RuleNameDTO>>> GetAll()
         {
-            return Ok();
+            _logger.LogInformation("Récupération de toutes les RuleName d'enchères ...");
+            var ruleNames = await _repository.GetAllAsync();
+            return Ok(_mapper.Map<IEnumerable<RuleNameDTO>>(ruleNames));
         }
 
-        [HttpGet]
-        [Route("validate")]
-        public IActionResult Validate([FromBody]RuleName trade)
+        [HttpGet("{id}")]
+        public async Task<ActionResult<RuleNameDTO>> GetById(int id)
         {
-            // TODO: check data valid and save to db, after saving return RuleName list
-            return Ok();
-        }
+            _logger.LogInformation($"Récupération de la liste des RuleName avec l'ID : {id}");
+            var ruleName = await _repository.GetByIdAsync(id);
+            if (ruleName == null)
+            {
+                _logger.LogWarning($"RuleName avec ID {id} non trouvé.");
+                return NotFound();
+            }
 
-        [HttpGet]
-        [Route("update/{id}")]
-        public IActionResult ShowUpdateForm(int id)
-        {
-            // TODO: get RuleName by Id and to model then show to the form
-            return Ok();
+            return Ok(_mapper.Map<RuleNameDTO>(ruleName));
         }
 
         [HttpPost]
-        [Route("update/{id}")]
-        public IActionResult UpdateRuleName(int id, [FromBody] RuleName rating)
+        public async Task<ActionResult<RuleNameDTO>> Create(RuleNameDTO ruleNameDto)
         {
-            // TODO: check required fields, if valid call service to update RuleName and return RuleName list
-            return Ok();
+            _logger.LogInformation("Création d'un nouveau RuleName...");
+            var ruleName = _mapper.Map<RuleName>(ruleNameDto);
+            var newRuleName = await _repository.AddAsync(ruleName);
+            _logger.LogInformation($"RuleName créé avec succès avec ID: {newRuleName.Id}");
+
+            return CreatedAtAction(nameof(GetById), new { id = newRuleName.Id }, _mapper.Map<RuleNameDTO>(newRuleName));
         }
 
-        [HttpDelete]
-        [Route("{id}")]
-        public IActionResult DeleteRuleName(int id)
+        [HttpPut("{id}")]
+        public async Task<IActionResult> Update(int id, RuleNameDTO ruleNameDto)
         {
-            // TODO: Find RuleName by Id and delete the RuleName, return to Rule list
-            return Ok();
+            if (id != ruleNameDto.Id)
+            {
+                _logger.LogWarning($"Échec de la mise à jour : Mismatch d'ID (Route: {id}, DTO: {ruleNameDto.Id}).");
+                return BadRequest();
+            }
+
+            var ruleName = await _repository.GetByIdAsync(id);
+            if (ruleName == null)
+            {
+                _logger.LogWarning($"Échec de la mise à jour : RuleName ID {id} non trouvé.");
+                return NotFound();
+            }
+
+            _mapper.Map(ruleNameDto, ruleName);
+            await _repository.UpdateAsync(ruleName);
+            _logger.LogInformation($"RuleName avec ID {id} Mise à jour réussie.");
+
+            return NoContent();
+        }
+
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> Delete(int id)
+        {
+            _logger.LogInformation($"Tentative de suppression RuleName avec ID: {id}");
+            var success = await _repository.DeleteAsync(id);
+            if (!success)
+            {
+                _logger.LogWarning($"Suppression échouée: RuleName avec ID {id} non trouvé.");
+                return NotFound();
+            }
+
+            _logger.LogInformation($"RuleName avec ID {id} supression réussie.");
+            return NoContent();
         }
     }
 }

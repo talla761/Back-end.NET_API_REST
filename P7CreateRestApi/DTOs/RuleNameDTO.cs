@@ -1,8 +1,12 @@
-namespace Dot.Net.WebApi.Controllers
+﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+
+namespace P7CreateRestApi.DTOs
 {
-    public class RuleName
+    public class RuleNameDTO
     {
-        // TODO: Map columns in data table RULENAME with corresponding fields
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
         public string Name { get; set; }
         public string Description { get; set; }

@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using P7CreateRestApi.Models;
+using P7CreateRestApi.Repositories.Interfaces;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
@@ -12,55 +13,31 @@ namespace Dot.Net.WebApi.Controllers
 {
     public class LoginController : ControllerBase
     {
-        private readonly UserManager<User> _userManager;
-        private readonly IConfiguration _configuration;
+        private readonly IJwtAuthenticationRepository _jwtAuthenticationRepository;
+        private readonly IConfiguration _config;
 
-        public LoginController(UserManager<User> userManager, IConfiguration configuration)
+        public LoginController(IJwtAuthenticationRepository JwtAuthenticationRepository, IConfiguration config)
         {
-            _userManager = userManager;
-            _configuration = configuration;
+            _jwtAuthenticationRepository = JwtAuthenticationRepository;
+            _config = config;
         }
+
 
         [HttpPost]
         [Route("login")]
         public async Task<IActionResult> Login([FromBody] LoginModel model)
         {
-            if (!ModelState.IsValid)
+            var user = _jwtAuthenticationRepository.Authenticate(model.Email , model.Password);
+            if (user == null)
             {
-                return BadRequest(ModelState);
+                var claims = new List<Claim>
+                {
+                    new Claim(ClaimTypes.Email, model.Email),
+                };
+                var token = _jwtAuthenticationRepository.GenerateToken(_config["Jwt:Key"], claims);
+                return Ok(token);
             }
-
-            var user = await _userManager.FindByEmailAsync(model.Email);
-            if (user == null || !await _userManager.CheckPasswordAsync(user, model.Password))
-            {
-                return Unauthorized(new { message = "Invalid credentials" });
-            }
-
-            var token = GenerateJwtToken(user);
-            return Ok(new { Token = token });
-        }
-
-        private string GenerateJwtToken(User user)
-        {
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var claims = new List<Claim>
-            {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Email),
-                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim(ClaimTypes.NameIdentifier, user.Id)
-            };
-
-            var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
-                claims: claims,
-                expires: DateTime.UtcNow.AddHours(2),
-                signingCredentials: creds
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
+            return Unauthorized();
         }
     }
 }

@@ -19,6 +19,8 @@ namespace P7CreateRestApi.MappingProfile
             CreateMap<RuleName, RuleNameDTO>().ReverseMap();
 
             CreateMap<Trade, TradeDTO>().ReverseMap();
+
+            CreateMap<User, UserDTO>().ReverseMap();
         }
     }
 }

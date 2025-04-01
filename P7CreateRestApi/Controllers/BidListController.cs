@@ -1,5 +1,6 @@
 using AutoMapper;
 using Dot.Net.WebApi.Domain;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using P7CreateRestApi.Areas.Identity.Data;
@@ -10,7 +11,8 @@ using System.Security.Cryptography;
 namespace Dot.Net.WebApi.Controllers
 {
     [ApiController]
-    [Route("api/[controller]")] 
+    [Route("api/[controller]")]
+    [Authorize]
     public class BidListController : ControllerBase
     {
         private readonly IGenericRepository<BidList> _repository;

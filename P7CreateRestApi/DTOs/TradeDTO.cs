@@ -8,7 +8,9 @@ namespace P7CreateRestApi.DTOs
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int TradeId { get; set; }
+        [Required(ErrorMessage = "Account est obligatoire")]
         public string? Account { get; set; }
+        [Required(ErrorMessage = "AccountType est obligatoire")]
         public string? AccountType { get; set; }
         public double? BuyQuantity { get; set; }
         public double? SellQuantity { get; set; }
@@ -19,7 +21,7 @@ namespace P7CreateRestApi.DTOs
         public string? TradeStatus { get; set; }
         public string? Trader { get; set; }
         public string? Benchmark { get; set; }
-        public string Book { get; set; }
+        public string?  Book { get; set; }
         public string? CreationName { get; set; }
         public DateTime? CreationDate { get; set; }
         public string? RevisionName { get; set; }

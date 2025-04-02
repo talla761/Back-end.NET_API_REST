@@ -10,20 +10,54 @@ namespace P7CreateRestApi.Repositories
 {
     public class JwtAuthenticationRepository : IJwtAuthenticationRepository
     {
-        private readonly List<User> Users = new List<User>()
+        //private readonly List<IdentityUser> Users = new List<IdentityUser>()
+        //{
+        //    new IdentityUser
+        //    {
+        //        Id = "1",
+        //        UserName  = "Test",
+        //        Email = "yvan@gmail.com",
+        //        PasswordHash = "123"
+        //    }
+        //};
+        //public IdentityUser Authenticate(string email, string password)
+        //{
+        //    return Users.Where(u => u.Email.ToUpper().Equals(email.ToUpper()) 
+        //        && u.PasswordHash.Equals(password)).FirstOrDefault();
+        //}
+
+        private readonly UserManager<IdentityUser> _userManager;
+
+        private readonly SignInManager<IdentityUser> _signInManager;
+        private readonly IConfiguration _configuration;
+
+        public JwtAuthenticationRepository(UserManager<IdentityUser> userManager,
+                       SignInManager<IdentityUser> signInManager,
+                       IConfiguration configuration)
         {
-            new User
+            _userManager = userManager;
+
+            _signInManager = signInManager;
+            _configuration = configuration;
+        }
+
+        public async Task<IdentityUser> Authenticate(string email, string password)
+        {
+            // Récupérer l'utilisateur par email
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
             {
-                Id = "1",
-                UserName  = "Test",
-                Email = "yvan@gmail.com",
-                Password = "123"
+                return null; // Utilisateur non trouvé
             }
-        };
-        public User Authenticate(string email, string password)
-        {
-            return Users.Where(u => u.Email.ToUpper().Equals(email.ToUpper()) 
-                && u.Password.Equals(password)).FirstOrDefault();
+
+            // Vérifier le mot de passe
+            var isPasswordValid = await _signInManager.PasswordSignInAsync(user, password, false, false);  //await _userManager.CheckPasswordAsync(user, password);
+            if (isPasswordValid.Succeeded)
+            {
+                return user;
+            }
+
+            return null; // Mot de passe invalide
         }
 
         public string GenerateToken(string secret, List<Claim> claims)

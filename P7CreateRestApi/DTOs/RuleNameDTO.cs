@@ -8,8 +8,11 @@ namespace P7CreateRestApi.DTOs
         [Key]
         [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
+        [Required(ErrorMessage = "Name est obligatoire")]
         public string Name { get; set; }
+        [Required(ErrorMessage = "Description est obligatoire")]
         public string Description { get; set; }
+        [Required(ErrorMessage = "Json est obligatoire")]
         public string Json { get; set; }
         public string Template { get; set; }
         public string SqlStr { get; set; }

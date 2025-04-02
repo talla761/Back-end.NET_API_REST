@@ -8,9 +8,9 @@ namespace P7CreateRestApi.DTOs
     {
         //[Key]
         //[DatabaseGenerated(DatabaseGeneratedOption.Identity)] // Auto-incrémentation de l'ID
-        //public int Id { get; set; }
+        public int Id { get; set; }
         //public string? Username { get; set; }
-        //public string Password { get; set; }
+        public string Password { get; set; }
         public string? Fullname { get; set; }
         public string? Role { get; set; }
     }

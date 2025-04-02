@@ -17,14 +17,13 @@
                 <label asp-for="Input.Username"></label>
                 <span asp-validation-for="Input.Username" class="text-danger"></span>
             </div>
-            <div class="form-floating">
+            <div class="form-floating" >
                 <input asp-for="Input.Fullname" class="form-control" autocomplete="fullname" aria-required="true" placeholder="Fullname" />
                 <label asp-for="Input.Fullname"></label>
                 <span asp-validation-for="Input.Fullname" class="text-danger"></span>
             </div>
-            <div class="form-floating">
+            <div class="form-floating" >
                 <select asp-for="Input.Role" class="form-select" aria-required="true">
-                    <option value="">-- Sélectionnez un rôle --</option>
                     <option value="Participant">Participant</option>
                     <option value="Organisateur">Organisateur</option>
                     <option value="Admin">Admin</option>

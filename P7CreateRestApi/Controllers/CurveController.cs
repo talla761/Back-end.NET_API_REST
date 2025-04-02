@@ -1,5 +1,6 @@
 using AutoMapper;
 using Dot.Net.WebApi.Domain;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using P7CreateRestApi.DTOs;
 using P7CreateRestApi.Repositories.Interfaces;
@@ -8,6 +9,7 @@ namespace Dot.Net.WebApi.Controllers
 {
     [ApiController]
     [Route("[controller]")]
+    [Authorize]
     public class CurveController : ControllerBase
     {
         private readonly IGenericRepository<CurvePoint> _repository;
